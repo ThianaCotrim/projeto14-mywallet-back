@@ -4,6 +4,7 @@ import { MongoClient } from "mongodb"
 import dotenv from "dotenv"
 import joi from "joi"
 import bcrypt from "bcrypt"
+import { v4 as uuid} from "uuid"
 
 //Criação do Servidor
 const app = express();
@@ -31,9 +32,15 @@ mongoClient.connect()
     confsenha: joi.string().required().min(3)
  })
 
+ const login = joi.object({
+    email: joi.string().email().required(),
+    senha: joi.string().required(),
+ })
+
 // Endpoint
 
 app.post("/cadastro", async (req, res) => {
+
     const {name, email, senha, confsenha} = req.body
 
     const senhaCript = bcrypt.hashSync(senha, 10)
@@ -46,29 +53,44 @@ app.post("/cadastro", async (req, res) => {
     }
 
     try{
-
        const usuarioExistente = await db.collection("infoUsuarios").findOne({email})
+       if(usuarioExistente) return res.status(409).send("Email já cadastrado anteriormente")
 
-       if(usuarioExistente){
-        return res.status(409).send("Email já cadastrado anteriormente")
-       }
+    }catch(err){res.sendStatus(500)}
 
-    }catch(err){
-        res.sendStatus(500)
-    }
-
-    if(senha !== confsenha){
-        return res.status(409).send("Confirmação de senha não confere com a senha")
-    }
+    if(senha !== confsenha) return res.status(409).send("Confirmação de senha não confere com a senha")
 
 
     try {
         await db.collection("infoUsuarios").insertOne({name, email, senha: senhaCript})
         return res.status(201).send("Usuário cadastrado com sucesso")
-    } catch (err){
-        res.sendStatus(500)
+    } catch (err){res.sendStatus(500)}
+
+})
+
+app.post("/", async (req, res) => {
+    const {email, senha} = req.body
+
+    const validate = login.validate(req.body, {abortEarly: false});
+
+    if(validate.error){
+        const errors = validate.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
     }
 
+    try{
+       const usuario =  await db.collection("infoUsuarios").findOne({email})
+       if(!usuario) {return res.status(404).send("E-mail não encontrado")}
+
+       const senhaCorreta = bcrypt.compareSync(senha, usuario.senha)
+       if(!senhaCorreta) {return res.status(401).send("Senha incorreta")}
+
+       const token = uuid()
+        db.collection("sessoes").insertOne({token, idUsuario: usuario._id})
+       res.send(token)
+
+    //    res.status(200).send("Login realizado com sucesso")
+    } catch(err){res.sendStatus(500)}
 })
 
 
