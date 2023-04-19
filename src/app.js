@@ -87,10 +87,28 @@ app.post("/", async (req, res) => {
 
        const token = uuid()
         db.collection("sessoes").insertOne({token, idUsuario: usuario._id})
-       res.send(token)
-
-    //    res.status(200).send("Login realizado com sucesso")
+        
+       res.status(200).send("Login realizado com sucesso")
     } catch(err){res.sendStatus(500)}
+})
+
+app.post("/nova-transacao/:tipo", async (req, res) => {
+    const {authorization} = req.headers
+
+    const token = authorization?.replace("Bearer ", "")
+
+    if(!token) {return res.status(401).send("Você não possui autorização para executar essa transação")}
+
+    try {
+        const sessao = await db.collection("sessoes").findOne({token})
+        if(!sessao){return res.status(401).send("Você não possui autorização para executar essa transação")}
+
+        // adicionar uma nova trasação aqui
+
+    } catch(err){
+
+    }
+
 })
 
 
