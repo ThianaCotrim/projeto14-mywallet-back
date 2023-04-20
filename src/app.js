@@ -27,7 +27,7 @@ mongoClient.connect()
 // Shermas
 
 const cadastroUsuario = joi.object({
-    name: joi.string().required(),
+    nome: joi.string().required(),
     email: joi.string().email().required(),
     senha: joi.string().required().min(3),
     confsenha: joi.string().required().min(3)
@@ -48,7 +48,7 @@ const transacao = joi.object({
 
 app.post("/cadastro", async (req, res) => {
 
-    const { name, email, senha, confsenha } = req.body
+    const { nome, email, senha, confsenha } = req.body
 
     const senhaCript = bcrypt.hashSync(senha, 10)
 
@@ -69,20 +69,23 @@ app.post("/cadastro", async (req, res) => {
 
 
     try {
-        await db.collection("infoUsuarios").insertOne({ name, email, senha: senhaCript })
+        await db.collection("infoUsuarios").insertOne({ nome, email, senha: senhaCript })
         return res.status(201).send("Usuário cadastrado com sucesso")
     } catch (err) { res.sendStatus(500) }
 
 })
 
-app.post("/", async (req, res) => {
+app.post("/login", async (req, res) => { 
+
     const { email, senha } = req.body
+    // console.log(req.body)
 
-    const validate = login.validate(req.body, { abortEarly: false });
+    const {error, value} = login.validate({email, senha}, {abortEarly : false})
 
-    if (validate.error) {
-        const errors = validate.error.details.map((detail) => detail.message);
+    if (error) {
+        const errors = error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
+        
     }
 
     try {
@@ -93,7 +96,8 @@ app.post("/", async (req, res) => {
         if (!senhaCorreta) { return res.status(401).send("Senha incorreta") }
 
         const token = uuid()
-        db.collection("sessoes").insertOne({ token, idUsuario: usuario._id })
+        await db.collection("sessoes").insertOne({ token, idUsuario: usuario._id })
+       
         // res.send(token)
         res.status(200).send("Login realizado com sucesso")
     } catch (err) { res.sendStatus(500) }
