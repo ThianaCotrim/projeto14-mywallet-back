@@ -4,7 +4,7 @@ import { MongoClient, ObjectId } from "mongodb"
 import dotenv from "dotenv"
 import joi from "joi"
 import bcrypt from "bcrypt"
-import { v4 as uuid} from "uuid"
+import { v4 as uuid } from "uuid"
 
 //Criação do Servidor
 const app = express();
@@ -20,118 +20,139 @@ const mongoClient = new MongoClient(process.env.DATABASE_URL)
 mongoClient.connect()
     .then(() => {
         db = mongoClient.db()
-        console.log("Mongodb rodando normalmente")})
+        console.log("Mongodb rodando normalmente")
+    })
     .catch((err) => console.log(err.message))
 
 // Shermas
 
- const cadastroUsuario = joi.object({
+const cadastroUsuario = joi.object({
     name: joi.string().required(),
     email: joi.string().email().required(),
     senha: joi.string().required().min(3),
     confsenha: joi.string().required().min(3)
- })
+})
 
- const login = joi.object({
+const login = joi.object({
     email: joi.string().email().required(),
     senha: joi.string().required(),
- })
+})
 
- const transacao = joi.object({
+const transacao = joi.object({
     valor: joi.number().required().positive(),
     descricao: joi.string().required(),
-    tipo: joi.string(),
- })
+    tipo: joi.string().valid("credito","debito")
+})
 
 // Endpoint
 
 app.post("/cadastro", async (req, res) => {
 
-    const {name, email, senha, confsenha} = req.body
+    const { name, email, senha, confsenha } = req.body
 
     const senhaCript = bcrypt.hashSync(senha, 10)
 
-    const validate = cadastroUsuario.validate(req.body, {abortEarly: false});
+    const validate = cadastroUsuario.validate(req.body, { abortEarly: false });
 
-    if(validate.error){
+    if (validate.error) {
         const errors = validate.error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
     }
 
-    try{
-       const usuarioExistente = await db.collection("infoUsuarios").findOne({email})
-       if(usuarioExistente) return res.status(409).send("Email já cadastrado anteriormente")
+    try {
+        const usuarioExistente = await db.collection("infoUsuarios").findOne({ email })
+        if (usuarioExistente) return res.status(409).send("Email já cadastrado anteriormente")
 
-    }catch(err){res.sendStatus(500)}
+    } catch (err) { res.sendStatus(500) }
 
-    if(senha !== confsenha) return res.status(409).send("Confirmação de senha não confere com a senha")
+    if (senha !== confsenha) return res.status(409).send("Confirmação de senha não confere com a senha")
 
 
     try {
-        await db.collection("infoUsuarios").insertOne({name, email, senha: senhaCript})
+        await db.collection("infoUsuarios").insertOne({ name, email, senha: senhaCript })
         return res.status(201).send("Usuário cadastrado com sucesso")
-    } catch (err){res.sendStatus(500)}
+    } catch (err) { res.sendStatus(500) }
 
 })
 
 app.post("/", async (req, res) => {
-    const {email, senha} = req.body
+    const { email, senha } = req.body
 
-    const validate = login.validate(req.body, {abortEarly: false});
+    const validate = login.validate(req.body, { abortEarly: false });
 
-    if(validate.error){
+    if (validate.error) {
         const errors = validate.error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
     }
 
-    try{
-       const usuario =  await db.collection("infoUsuarios").findOne({email})
-       if(!usuario) {return res.status(404).send("E-mail não encontrado")}
+    try {
+        const usuario = await db.collection("infoUsuarios").findOne({ email })
+        if (!usuario) { return res.status(404).send("E-mail não encontrado") }
 
-       const senhaCorreta = bcrypt.compareSync(senha, usuario.senha)
-       if(!senhaCorreta) {return res.status(401).send("Senha incorreta")}
+        const senhaCorreta = bcrypt.compareSync(senha, usuario.senha)
+        if (!senhaCorreta) { return res.status(401).send("Senha incorreta") }
 
-       const token = uuid()
-        db.collection("sessoes").insertOne({token, idUsuario: usuario._id})
-        
-       res.status(200).send("Login realizado com sucesso")
-    } catch(err){res.sendStatus(500)}
+        const token = uuid()
+        db.collection("sessoes").insertOne({ token, idUsuario: usuario._id })
+        // res.send(token)
+        res.status(200).send("Login realizado com sucesso")
+    } catch (err) { res.sendStatus(500) }
 })
 
 app.post("/transacao", async (req, res) => {
 
-    const {valor, descricao, tipo} = req.body
+    const { valor, descricao, tipo } = req.body
 
-    const validate = transacao.validate(req.body, {abortEarly: false})
-    
-    if(validate.error){
+    const validate = transacao.validate(req.body, { abortEarly: false })
+
+    if (validate.error) {
         const errors = validate.error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
     }
-    
-    console.log(validate)
 
-    const {authorization} = req.headers
+    // console.log(validate)
+
+    const { authorization } = req.headers
 
     const token = authorization?.replace("Bearer ", "")
 
-    if(!token) return res.status(401).send("Você não possui autorização para executar essa transação")
+    if (!token) return res.status(401).send("Você não possui autorização para executar essa transação")
+    try{
 
-        const sessao = await db.collection("sessoes").findOne({token})
-        if(!sessao) return res.status(401).send("Você não possui autorização para executar essa transação")
+        const sessao = await db.collection("sessoes").findOne({ token })
+        if (!sessao) return res.status(401).send("Você não possui autorização para executar essa transação")
+    
+        const user = await db.collection("infoUsuarios").findOne({ _id: new ObjectId(sessao.idUsuario) })
+        if (!user) return res.status(401).send("Ok, usuário logado")
+    
+        await db.collection("transacoes").insertOne(req.body)
+    
+        res.status(200).send("Transação inserida com sucesso")
 
-        const user = await db.collection("infoUsuarios").findOne({_id: new ObjectId(sessao.idUsuario)})
-        if(!user) return res.status(401).send("Ok, usuário logado")
 
-        res.status(200).send(req.body)
-        // falta adicionar no banco de dados
+    } catch (err) { res.sendStatus(500) }
+
+   
 
 })
 
+app.get("/transacao", async (req, res) => {
 
+    const { authorization } = req.headers
 
+    const token = authorization?.replace("Bearer ", "")
 
+    const sessao = await db.collection("sessoes").findOne({ token })
+    if (!sessao) return res.status(401).send("Você não possui autorização para executar essa transação")
+ 
+    try {
+        
+       const operacoes = await db.collection("transacoes").find().toArray()
+        res.status(200).send(operacoes)
 
+    } catch (err) { res.sendStatus(500) }
+ 
+})
 
 
 // Servidor escutando 
