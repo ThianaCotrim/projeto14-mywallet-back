@@ -39,7 +39,7 @@ const login = joi.object({
 })
 
 const transacao = joi.object({
-    valor: joi.number().required().positive(),
+    valor: joi.number().required(),
     descricao: joi.string().required(),
     tipo: joi.string().valid("credito","debito")
 })
