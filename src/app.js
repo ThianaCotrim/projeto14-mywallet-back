@@ -1,6 +1,6 @@
 import express from "express"
 import cors from "cors"
-import { MongoClient } from "mongodb"
+import { MongoClient, ObjectId } from "mongodb"
 import dotenv from "dotenv"
 import joi from "joi"
 import bcrypt from "bcrypt"
@@ -35,6 +35,12 @@ mongoClient.connect()
  const login = joi.object({
     email: joi.string().email().required(),
     senha: joi.string().required(),
+ })
+
+ const transacao = joi.object({
+    valor: joi.number().required().positive(),
+    descricao: joi.string().required(),
+    tipo: joi.string(),
  })
 
 // Endpoint
@@ -92,22 +98,33 @@ app.post("/", async (req, res) => {
     } catch(err){res.sendStatus(500)}
 })
 
-app.post("/nova-transacao/:tipo", async (req, res) => {
+app.post("/transacao", async (req, res) => {
+
+    const {valor, descricao, tipo} = req.body
+
+    const validate = transacao.validate(req.body, {abortEarly: false})
+    
+    if(validate.error){
+        const errors = validate.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
+    
+    console.log(validate)
+
     const {authorization} = req.headers
 
     const token = authorization?.replace("Bearer ", "")
 
-    if(!token) {return res.status(401).send("Você não possui autorização para executar essa transação")}
+    if(!token) return res.status(401).send("Você não possui autorização para executar essa transação")
 
-    try {
         const sessao = await db.collection("sessoes").findOne({token})
-        if(!sessao){return res.status(401).send("Você não possui autorização para executar essa transação")}
+        if(!sessao) return res.status(401).send("Você não possui autorização para executar essa transação")
 
-        // adicionar uma nova trasação aqui
+        const user = await db.collection("infoUsuarios").findOne({_id: new ObjectId(sessao.idUsuario)})
+        if(!user) return res.status(401).send("Ok, usuário logado")
 
-    } catch(err){
-
-    }
+        res.status(200).send(req.body)
+        // falta adicionar no banco de dados
 
 })
 
