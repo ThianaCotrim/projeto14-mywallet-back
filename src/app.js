@@ -5,6 +5,7 @@ import dotenv from "dotenv"
 import joi from "joi"
 import bcrypt from "bcrypt"
 import { v4 as uuid } from "uuid"
+import dayjs from "dayjs"
 
 //Criação do Servidor
 const app = express();
@@ -107,6 +108,13 @@ app.post("/transacao", async (req, res) => {
 
     const { valor, descricao, tipo } = req.body
 
+    const newTransacao = {
+        valor: valor,
+        descricao: descricao,
+        tipo: tipo,
+        date : dayjs().format( 'DD/MM' )
+    }
+
     const validate = transacao.validate(req.body, { abortEarly: false })
 
     if (validate.error) {
@@ -129,7 +137,7 @@ app.post("/transacao", async (req, res) => {
         const user = await db.collection("infoUsuarios").findOne({ _id: new ObjectId(sessao.idUsuario) })
         if (!user) return res.status(401).send("Ok, usuário logado")
     
-        await db.collection("transacoes").insertOne(req.body)
+        await db.collection("transacoes").insertOne(newTransacao)
     
         res.status(200).send("Transação inserida com sucesso")
 
@@ -142,6 +150,8 @@ app.post("/transacao", async (req, res) => {
 
 app.get("/transacao", async (req, res) => {
 
+    console.log(req.body)
+
     const { authorization } = req.headers
 
     const token = authorization?.replace("Bearer ", "")
@@ -150,7 +160,9 @@ app.get("/transacao", async (req, res) => {
     if (!sessao) return res.status(401).send("Você não possui autorização para executar essa transação")
  
     try {
-        
+
+        // const usuario = await db.collection("infoUsuarios").findOne({ email })
+
        const operacoes = await db.collection("transacoes").find().toArray()
         res.status(200).send(operacoes)
 
