@@ -103,12 +103,12 @@ app.post("/login", async (req, res) => {
 
 app.post("/transacao", async (req, res) => {
 
-    const { valor, descricao, tipo } = req.body
+    const { valor, descricao, tipo} = req.body
 
     const newTransacao = {
         valor: valor,
         descricao: descricao,
-        type: tipo,
+        tipo: tipo,
         date : dayjs().format( 'DD/MM' )
     }
 
@@ -132,11 +132,9 @@ app.post("/transacao", async (req, res) => {
         const user = await db.collection("infoUsuarios").findOne({ _id: new ObjectId(sessao.idUsuario) })
         if (!user) return res.status(401).send("Ok, usuário logado")
     
-        await db.collection("transacoes").insertOne({newTransacao, usuario: sessao.idUsuario, tipo})
+        await db.collection("transacoes").insertOne({newTransacao, usuario: sessao.idUsuario})
     
         res.status(200).send("Transação inserida com sucesso")
-
-
     } catch (err) { res.sendStatus(500) }
 
 })
