@@ -79,16 +79,13 @@ app.post("/cadastro", async (req, res) => {
 app.post("/login", async (req, res) => { 
 
     const { email, senha } = req.body
-    // console.log(req.body)
 
     const {error, value} = login.validate({email, senha}, {abortEarly : false})
 
     if (error) {
         const errors = error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
-        
     }
-
     try {
         const usuario = await db.collection("infoUsuarios").findOne({ email })
         if (!usuario) { return res.status(404).send("E-mail não encontrado") }
@@ -97,9 +94,9 @@ app.post("/login", async (req, res) => {
         if (!senhaCorreta) { return res.status(401).send("Senha incorreta") }
 
         const token = uuid()
-        await db.collection("sessoes").insertOne({ token, idUsuario: usuario._id })
-       
-        res.send(token)
+        await db.collection("sessoes").insertOne({ token, idUsuario: usuario._id, nomePerfil: usuario.nome})
+        res.send({token , nomePerfil: usuario.nome, idUsuario: usuario._id})
+
         // res.status(200).send("Login realizado com sucesso")
     } catch (err) { res.sendStatus(500) }
 })
@@ -122,8 +119,6 @@ app.post("/transacao", async (req, res) => {
         return res.status(422).send(errors);
     }
 
-    // console.log(validate)
-
     const { authorization } = req.headers
 
     const token = authorization?.replace("Bearer ", "")
@@ -137,20 +132,16 @@ app.post("/transacao", async (req, res) => {
         const user = await db.collection("infoUsuarios").findOne({ _id: new ObjectId(sessao.idUsuario) })
         if (!user) return res.status(401).send("Ok, usuário logado")
     
-        await db.collection("transacoes").insertOne(newTransacao)
+        await db.collection("transacoes").insertOne({newTransacao, usuario: sessao.idUsuario})
     
         res.status(200).send("Transação inserida com sucesso")
 
 
     } catch (err) { res.sendStatus(500) }
 
-   
-
 })
 
 app.get("/transacao", async (req, res) => {
-
-    console.log(req.body)
 
     const { authorization } = req.headers
 
@@ -161,9 +152,7 @@ app.get("/transacao", async (req, res) => {
  
     try {
 
-        // const usuario = await db.collection("infoUsuarios").findOne({ email })
-
-       const operacoes = await db.collection("transacoes").find().toArray()
+       const operacoes = await db.collection("transacoes").find({usuario: sessao.idUsuario}).toArray()
         res.status(200).send(operacoes)
 
     } catch (err) { res.sendStatus(500) }
