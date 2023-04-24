@@ -108,7 +108,7 @@ app.post("/transacao", async (req, res) => {
     const newTransacao = {
         valor: valor,
         descricao: descricao,
-        tipo: tipo,
+        type: tipo,
         date : dayjs().format( 'DD/MM' )
     }
 
@@ -132,7 +132,7 @@ app.post("/transacao", async (req, res) => {
         const user = await db.collection("infoUsuarios").findOne({ _id: new ObjectId(sessao.idUsuario) })
         if (!user) return res.status(401).send("Ok, usuário logado")
     
-        await db.collection("transacoes").insertOne({newTransacao, usuario: sessao.idUsuario})
+        await db.collection("transacoes").insertOne({newTransacao, usuario: sessao.idUsuario, tipo})
     
         res.status(200).send("Transação inserida com sucesso")
 
