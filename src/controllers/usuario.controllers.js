@@ -31,6 +31,7 @@ export async function postLogin(req, res) {
         const errors = error.details.map((detail) => detail.message);
         return res.status(422).send(errors)
     }
+    
     try {
         const usuario = await db.collection("infoUsuarios").findOne({ email })
         if (!usuario) { return res.status(404).send("E-mail não encontrado") }

@@ -16,7 +16,7 @@ export async function postTransacao(req, res) {
     const { authorization } = req.headers
     const token = authorization?.replace("Bearer ", "")
 
-    if (!token) return res.status(401).send("Você não possui autorização para executar essa transação")
+    if (!token) return res.status(401).send("Você não possui autorização para executar essa transação") 
 
     try {
         const sessao = await db.collection("sessoes").findOne({ token })
