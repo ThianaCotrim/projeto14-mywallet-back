@@ -1,7 +1,6 @@
-import { db } from "../app.js";
+import { db } from "../database/database.connection.js";
 import dayjs from "dayjs"
 import { ObjectId } from "mongodb";
-import { transacao } from "../schemas/transacao.schemas.js";
 
 export async function postTransacao(req, res) {
 
@@ -12,13 +11,6 @@ export async function postTransacao(req, res) {
         descricao: descricao,
         tipo: tipo,
         date: dayjs().format('DD/MM')
-    }
-
-    const validate = transacao.validate(req.body, { abortEarly: false })
-
-    if (validate.error) {
-        const errors = validate.error.details.map((detail) => detail.message);
-        return res.status(422).send(errors)
     }
 
     const { authorization } = req.headers

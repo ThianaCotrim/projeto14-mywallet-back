@@ -1,19 +1,12 @@
-import { db } from "../app.js";
+import { db } from "../database/database.connection.js";
 import bcrypt from "bcrypt"
 import { v4 as uuid } from "uuid"
-import { cadastroUsuario } from "../schemas/usuario.schemas.js"
 import { login } from "../schemas/usuario.schemas.js";
 
 export async function postCadastro(req, res) {
 
     const { nome, email, senha, confsenha } = req.body
     const senhaCript = bcrypt.hashSync(senha, 10)
-    const validate = cadastroUsuario.validate(req.body, { abortEarly: false });
-
-    if (validate.error) {
-        const errors = validate.error.details.map((detail) => detail.message);
-        return res.status(422).send(errors)
-    }
 
     try {
         const usuarioExistente = await db.collection("infoUsuarios").findOne({ email })
@@ -50,4 +43,4 @@ export async function postLogin(req, res) {
         res.send({ token, nomePerfil: usuario.nome, idUsuario: usuario._id })
 
     } catch (err) { res.sendStatus(500) }
-}
+}   
