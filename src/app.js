@@ -3,8 +3,7 @@ import cors from "cors"
 import { MongoClient} from "mongodb"
 import dotenv from "dotenv"
 import joi from "joi"
-import { postCadastro, postLogin } from "./controllers/usuario.controllers.js"
-import { getTransacao, postTransacao } from "./controllers/transacao.controllers.js"
+import router from "./routes/index.routes.js"
 
 //Criação do Servidor
 const app = express();
@@ -12,6 +11,7 @@ const app = express();
 //Configuração do Servidor
 app.use(express.json())
 app.use(cors())
+app.use(router)
 dotenv.config()
 
 //Setup do Banco de Dados
@@ -23,11 +23,8 @@ try {
     console.log(err.message)
 }   
 export const db = mongoClient.db()
-        
-    
 
 // Shermas
-
 export const cadastroUsuario = joi.object({
     nome: joi.string().required(),
     email: joi.string().email().required(),
@@ -45,17 +42,6 @@ export const transacao = joi.object({
     descricao: joi.string().required(),
     tipo: joi.string().valid("credito", "debito")
 })
-
-// Rotas
-
-app.post("/cadastro", postCadastro)
-
-app.post("/login", postLogin)
-
-app.post("/transacao", postTransacao)
-
-app.get("/transacao", getTransacao)
-
 
 // Servidor escutando 
 const PORT = 5000;
