@@ -1,6 +1,8 @@
-import { cadastroUsuario, db, login } from "../app.js";
+import { db } from "../app.js";
 import bcrypt from "bcrypt"
 import { v4 as uuid } from "uuid"
+import { cadastroUsuario } from "../schemas/usuario.schemas.js"
+import { login } from "../schemas/usuario.schemas.js";
 
 export async function postCadastro(req, res) {
 

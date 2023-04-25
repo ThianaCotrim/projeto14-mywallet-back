@@ -1,6 +1,7 @@
-import { db, transacao } from "../app.js";
+import { db } from "../app.js";
 import dayjs from "dayjs"
 import { ObjectId } from "mongodb";
+import { transacao } from "../schemas/transacao.schemas.js";
 
 export async function postTransacao(req, res) {
 
